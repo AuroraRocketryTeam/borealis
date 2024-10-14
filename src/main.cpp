@@ -134,7 +134,7 @@ class Rocket {
         void state2() {
             // countdown and igition
             if (countdown > 0) {
-                if (!check_sensors || get_abort_command()) {
+                if (!check_sensors() || get_abort_command()) {
                     state = 0;
                 }
                 countdown--;
