@@ -65,7 +65,7 @@ float mean_n(node* list, int start, int end) {
         if (list == NULL) {break;}
         n++;
     }
-    return sum/(end - start + 1);
+    return sum/(float)(end - start + 1);
 }
 
 
