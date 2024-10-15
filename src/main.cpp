@@ -82,13 +82,6 @@ void send_telemetry(node *acc, node *pres) {
 
 }
 
-float get_acc() {
-    return 1;
-}
-
-float get_press() {
-    return 1;
-}
 
 bool check_sensors() {
     return true;
@@ -185,7 +178,7 @@ class Rocket {
 
         float get_mod_acc() {
             acc_vect = bno055.getData().getAccelerometer();
-            return (float)pow(pow(acc_vect.x, 2) + pow(acc_vect.y, 2) + pow(acc_vect.z, 2), 0.5);
+            return pow(pow(acc_vect.x, 2) + pow(acc_vect.y, 2) + pow(acc_vect.z, 2), 0.5);
         }
 
         uint32_t get_press() {
@@ -199,7 +192,7 @@ class Rocket {
             acceleration = zeros(1);
             pressure = zeros(1);
             for (int i = 0; i < 1000/update_period_ms; i++) {
-                push(acceleration, get_acc());
+                push(acceleration, get_mod_acc());
                 push(pressure, get_press());
                 delay(update_period_ms);
             }
