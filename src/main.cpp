@@ -1,4 +1,13 @@
 #include <Arduino.h>
+#include "sensors/BME680/BME680Sensor.h"
+#include "sensors/BNO055/BNO055Sensor.h"
+#include "utils/logger/CborLogger.h"
+
+BME680Sensor bme680;
+BNO055Sensor bno055;
+CborLogger cbor_logger;
+
+
 
 typedef struct node {
     float number;
@@ -108,9 +117,10 @@ const int pressure_delta = 10;
 class Rocket {
     private:
         int state;
+        sensors_vec_t acc_vect;
         float curr_acc;
-        float curr_press;
-        float min_press;
+        uint32_t curr_press;
+        uint32_t min_press;
         node *acceleration;
         node *pressure;
         int countdown;
@@ -173,6 +183,15 @@ class Rocket {
             // recovery
         }
 
+        float get_mod_acc() {
+            acc_vect = bno055.getData().getAccelerometer();
+            return (float)pow(pow(acc_vect.x, 2) + pow(acc_vect.y, 2) + pow(acc_vect.z, 2), 0.5);
+        }
+
+        uint32_t get_press() {
+            return bme680.getData().getPressure();
+        }
+
     public:
         Rocket() {
             state = 0;
@@ -184,13 +203,14 @@ class Rocket {
                 push(pressure, get_press());
                 delay(update_period_ms);
             }
-            curr_acc = get_acc();
-            curr_press = get_press();
+            update();
             min_press = curr_press;
         }
 
         void update() {
-            curr_acc = get_acc();
+            bme680.readData();
+            bno055.readData();
+            curr_acc = get_mod_acc();
             curr_press = get_press();
             push(acceleration, curr_acc);
             push(pressure, curr_press);
@@ -227,7 +247,8 @@ class Rocket {
 
 void setup()
 {
-  
+    bme680.init(BME680_I2C_ADDR_1);
+    bno055.init();
 }
 
 Rocket rocket;
