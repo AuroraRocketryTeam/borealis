@@ -4,9 +4,11 @@
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
-
 updates:
   - package-ecosystem: "platformio"
-    directory: "/platformio"
+    versioning-strategy: "auto"
+    directory: "/" # Location of your platformio.ini file
     schedule:
-      interval: "weekly"
+      interval: "weekly" # or "daily", "monthly"
+    commit-message:
+      prefix: "[DEPS-UPDATE]" # Custom commit message prefix
