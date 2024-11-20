@@ -24,7 +24,7 @@
 
 #define LORA_RX 5
 #define LORA_TX 4
-#define LORA_AUX 6
+#define LORA_AUX -1
 #define LORA_M0 -1
 #define LORA_M1 -1
 // Add here some other pin.
