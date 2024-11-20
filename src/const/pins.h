@@ -8,8 +8,7 @@
  * @copyright Copyright (c) 2024
  * 
  */
-#ifndef PINS_H
-#define PINS_H
+#pragma once
 
 /**
  * @brief I2C STD PIN.
@@ -30,4 +29,4 @@
 #define LORA_M1 -1
 // Add here some other pin.
 
-#endif // PINS_H
+

@@ -1,5 +1,4 @@
-#ifndef LORA_CONFIGURATION_DESERIALIZER_HPP
-#define LORA_CONFIGURATION_DESERIALIZER_HPP
+#pragma once
 
 #include <nlohmann/json.hpp>
 #include <LoRa_E220.h>
@@ -147,4 +146,3 @@ private:
     ILogger *logger;
 };
 
-#endif // LORA_CONFIGURATION_DESERIALIZER_HPP

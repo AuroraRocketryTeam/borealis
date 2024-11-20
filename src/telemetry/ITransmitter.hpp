@@ -1,5 +1,4 @@
-#ifndef ITRANSMITTER_HPP
-#define ITRANSMITTER_HPP
+#pragma once
 
 #include <nlohmann/json.hpp>
 #include <variant>
@@ -17,4 +16,3 @@ class ITransmitter
         virtual void transmit(std::variant<char *, String, std::string, nlohmann::json> data) = 0;
 };
 
-#endif
