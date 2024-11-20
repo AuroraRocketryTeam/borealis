@@ -23,6 +23,11 @@
 #define I2C_MASTER_TX_BUF_DISABLE 0
 #define I2C_MASTER_RX_BUF_DISABLE 0
 
+#define LORA_RX 5
+#define LORA_TX 4
+#define LORA_AUX 6
+#define LORA_M0 -1
+#define LORA_M1 -1
 // Add here some other pin.
 
 #endif // PINS_H
