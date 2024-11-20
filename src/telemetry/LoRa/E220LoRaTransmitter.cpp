@@ -2,6 +2,7 @@
 
 bool E220LoRaTransmitter::init()
 {
+    transmitter.begin();
     auto configurationStatus = this->getConfiguration();
     auto configuration = *(Configuration *)configurationStatus.data;
 
@@ -29,19 +30,14 @@ bool E220LoRaTransmitter::init()
 
 bool E220LoRaTransmitter::init(unsigned long serialBaudRate, Configuration config)
 {
-    serial.begin(serialBaudRate);
-    transmitter = LoRa_E220(&serial, auxPin, m0Pin, m1Pin);
     transmitter.begin();
-
     auto configurationStatus = this->getConfiguration();
-
+    auto currentConfig = *(Configuration *)configurationStatus.data;
     if (configurationStatus.status.code != E220_SUCCESS)
     {
         logger->logError(("Failed to get configuration from LoRa module with error: " + String(configurationStatus.status.getResponseDescription()) + " (" + String(configurationStatus.status.code) + ")").c_str());
         return false;
     }
-
-    auto currentConfig = *(Configuration *)configurationStatus.data;
     logger->logInfo(("LoRa module status: " + String(configurationStatus.status.getResponseDescription()) + " (" + String(configurationStatus.status.code) + ")").c_str());
     logger->logInfo(("Current configuration: " + getConfigurationString(currentConfig)).c_str());
     configurationStatus.close();
@@ -50,6 +46,22 @@ bool E220LoRaTransmitter::init(unsigned long serialBaudRate, Configuration confi
 
 void E220LoRaTransmitter::transmit(std::variant<char *, String, std::string, nlohmann::json> data)
 {
+    // Extract the data from the variant
+    String dataString;
+    dataString = std::holds_alternative<char *>(data) ? String(std::get<char *>(data)) :
+                 std::holds_alternative<String>(data) ? std::get<String>(data) :
+                 std::holds_alternative<std::string>(data) ? String(std::get<std::string>(data).c_str()) :
+                 std::holds_alternative<nlohmann::json>(data) ? String(std::get<nlohmann::json>(data).dump().c_str()) :
+                 "";
+    auto response = transmitter.sendFixedMessage(LORA_DESTINATION_ADDH, LORA_DESTINATION_ADDL, LORA_CHANNEL, dataString);
+
+    if (response.code != E220_SUCCESS)
+    {
+        logger->logError(("Failed to send message to LoRa module with error: " + String(response.getResponseDescription()) + " (" + String(response.code) + ")").c_str());
+        return;
+    }
+    logger->logInfo("Message sent successfully.");
+    logger->logInfo(("Message: " + dataString).c_str());
 }
 
 bool E220LoRaTransmitter::configure(Configuration configuration)
