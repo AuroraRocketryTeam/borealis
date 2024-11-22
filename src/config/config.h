@@ -7,8 +7,7 @@
 
 // LoRa configuration
 #define LORA_DESTINATION_ADDH 0x00
-#define LORA_DESTINATION_ADDL 0x03
+#define LORA_DESTINATION_ADDL 0x05
 #define LORA_CHANNEL 23
-#define FREQUENCY_868
-#define ENABLE_RSSI
+
 

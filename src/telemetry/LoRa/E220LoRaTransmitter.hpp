@@ -26,7 +26,7 @@ public:
                         serial(serial), auxPin(-1), m0Pin(-1), m1Pin(-1), transmitter(&serial, -1, -1, -1) {};
 
     ResponseStatusContainer init() override;
-    ResponseStatusContainer init(unsigned long serialBaudRate, Configuration config);
+    ResponseStatusContainer init(Configuration config);
     ResponseStatusContainer transmit(std::variant<char *, String, std::string, nlohmann::json> data) override;
     ResponseStatusContainer configure(Configuration configuration);
 

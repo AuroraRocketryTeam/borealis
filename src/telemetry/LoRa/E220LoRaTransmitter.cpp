@@ -25,10 +25,10 @@ ResponseStatusContainer E220LoRaTransmitter::init()
     configuration.TRANSMISSION_MODE.WORPeriod = WOR_2000_011;
 
     configurationStatus.close();
-    return this->init(9600, configuration);
+    return this->configure(configuration);
 }
 
-ResponseStatusContainer E220LoRaTransmitter::init(unsigned long serialBaudRate, Configuration config)
+ResponseStatusContainer E220LoRaTransmitter::init(Configuration config)
 {
     transmitter.begin();
     return this->configure(config);
@@ -43,6 +43,19 @@ ResponseStatusContainer E220LoRaTransmitter::transmit(std::variant<char *, Strin
                  std::holds_alternative<std::string>(data) ? String(std::get<std::string>(data).c_str()) :
                  std::holds_alternative<nlohmann::json>(data) ? String(std::get<nlohmann::json>(data).dump().c_str()) :
                  "";
+    if(dataString.length() > 200)
+    {
+        //split it in smaller strings and send them one by one
+        int start = 0;
+        while (start < dataString.length()) {
+            String chunk = dataString.substring(start, start + 199);
+            auto response = transmitter.sendFixedMessage(LORA_DESTINATION_ADDH, LORA_DESTINATION_ADDL, LORA_CHANNEL, chunk);
+            if (response.code != E220_SUCCESS) {
+                return ResponseStatusContainer(response.code, response.getResponseDescription());
+            }
+            start += 199;
+        }
+    }
     auto response = transmitter.sendFixedMessage(LORA_DESTINATION_ADDH, LORA_DESTINATION_ADDL, LORA_CHANNEL, dataString);
 
     return ResponseStatusContainer(response.code, response.getResponseDescription());

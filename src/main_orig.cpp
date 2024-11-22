@@ -8,7 +8,6 @@
 #include "utils/logger/rocket_logger/RocketLogger.hpp"
 #include "config/config.h"
 #include "telemetry/LoRa/E220LoRaTransmitter.hpp"
-#include "telemetry/ResponseCode.hpp"
 
 ILogger *rocketLogger;
 // ISensor *bme680;
@@ -20,8 +19,8 @@ HardwareSerial serial(1);
 void setup()
 {
     serial.begin(9600, SERIAL_8N1, 2, 3);
-    Serial.begin(115200);
-
+    Serial.begin(9600);
+    delay(500);
     rocketLogger = new RocketLogger();
     // bme680 = new BME680Sensor(BME680_I2C_ADDR_1);
     mprls = new MPRLSSensor();
@@ -32,9 +31,8 @@ void setup()
     {
         rocketLogger->logInfo(
             ("LoRa transmitter initialized with configuration: " +
-             static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(
-             *(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
-            .c_str());
+             static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
+                .c_str());
     }
     else
     {
@@ -43,6 +41,9 @@ void setup()
              transmitterStatus.getDescription() +
              " (" + String(transmitterStatus.getCode()) + ")")
                 .c_str());
+        rocketLogger->logInfo(("Current configuration: " +
+                               static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
+                                  .c_str());
     }
     rocketLogger->logInfo("Setup started.");
 
@@ -99,9 +100,38 @@ void loop()
     {
         rocketLogger->logSensorData(bno055Value.value());
     }
-    loraTransmitter->transmit(rocketLogger->getJSONAll());
+    auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
+    if (response.getCode() != RESPONSE_STATUS::E220_SUCCESS)
+    {
+        rocketLogger->logError(("Failed to transmit data with error: " + response.getDescription() + " (" + String(response.getCode()) + ")").c_str());
+    }
+    else if (response.getCode() == RESPONSE_STATUS::ERR_E220_PACKET_TOO_BIG)
+    {
+        rocketLogger->logError("Data packet too big to transmit.");
+        // Split the JSON data into smaller packets by selecting JSON objects one by one and transmit them
+        for(auto &data : rocketLogger->getJSONAll())
+        {
+            auto response = loraTransmitter->transmit(data);
+            if (response.getCode() != RESPONSE_STATUS::E220_SUCCESS)
+            {
+                rocketLogger->logError(("Failed to transmit data with error: " + response.getDescription() + " (" + String(response.getCode()) + ")").c_str());
+            } else if (response.getCode() == RESPONSE_STATUS::ERR_E220_PACKET_TOO_BIG)
+            {
+                rocketLogger->logError("Data packet too big to transmit.");
+                // Log the json object's content element by element
+                for (json::iterator it = data.begin(); it != data.end(); ++it)
+                {
+                    rocketLogger->logInfo(it.key() + ": " + it.value().dump());
+                }
+            }
+        }
+    }
+    else
+    {
+        rocketLogger->logInfo("Data transmitted successfully.");
+    }
     Serial.write(rocketLogger->getJSONAll().dump(4).c_str());
     rocketLogger->clearData();
-    delay(5000);
+    delay(2000);
 }
 */
