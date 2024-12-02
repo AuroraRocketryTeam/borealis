@@ -1,88 +1,43 @@
 #include <Wire.h>
 #include <HardwareSerial.h>
-#include "sensors/ISensor.hpp"
+#include <optional>
+#include <vector>
+#include <string>
+#include "global/config.h"
+#include "utils/utilities/functions.h"
 #include "utils/logger/ILogger.hpp"
+#include "utils/logger/rocket_logger/RocketLogger.hpp"
+#include "sensors/ISensor.hpp"
 #include "sensors/BME680/BME680Sensor.hpp"
 #include "sensors/BNO055/BNO055Sensor.hpp"
 #include "sensors/MPRLS/MPRLSSensor.hpp"
-#include "utils/logger/rocket_logger/RocketLogger.hpp"
-#include "global/config.h"
 #include "telemetry/LoRa/E220LoRaTransmitter.hpp"
+#include "Arduino.h"
 
 ILogger *rocketLogger;
 // ISensor *bme680;
 ISensor *bno055;
 ISensor *mprls;
 ITransmitter *loraTransmitter;
-HardwareSerial lora_serial(1);
+HardwareSerial lora_serial(LORA_SERIAL);
+
+void checkTransmitterStatus(ResponseStatusContainer &transmitterStatus);
+void checkSensorsStatus();
 
 void setup()
 {
-    lora_serial.begin(SERIAL_BAUD_RATE, SERIAL_8N1, 2, 3);
+    lora_serial.begin(SERIAL_BAUD_RATE, SERIAL_8N1, LORA_RX_PIN, LORA_RX_PIN);
     Serial.begin(SERIAL_BAUD_RATE);
-    delay(500);
-    rocketLogger = new RocketLogger();
+    non_blocking_delay(500);
     // bme680 = new BME680Sensor(BME680_I2C_ADDR_1);
     mprls = new MPRLSSensor();
     bno055 = new BNO055Sensor();
     loraTransmitter = new E220LoRaTransmitter(lora_serial, 4, -1, -1);
     auto transmitterStatus = loraTransmitter->init();
-    if (transmitterStatus.getCode() == RESPONSE_STATUS::E220_SUCCESS)
-    {
-        rocketLogger->logInfo(
-            ("LoRa transmitter initialized with configuration: " +
-             static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
-                .c_str());
-    }
-    else
-    {
-        rocketLogger->logError(
-            ("Failed to initialize LoRa transmitter with error: " +
-             transmitterStatus.getDescription() +
-             " (" + String(transmitterStatus.getCode()) + ")")
-                .c_str());
-        rocketLogger->logInfo(("Current configuration: " +
-                               static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
-                                  .c_str());
-    }
+    checkTransmitterStatus(transmitterStatus);
     rocketLogger->logInfo("Setup started.");
 
-    // Define a struct to store sensor initialization information
-    struct SensorInitInfo
-    {
-        ISensor *sensor;
-        std::string name;
-        std::optional<int> address;
-    };
-
-    // Utility vector to initialize all sensors in a loop
-    std::vector<SensorInitInfo> sensors = {
-        // {bme680, "BME680", BME680_I2C_ADDR_1},
-        {mprls, "MPRLS", 0x18},
-        {bno055, "BNO055", BNO055_I2C_ADDR}};
-
-    // Lambda function to log sensor initialization result based on initialization success
-    auto logInitializationResult = [&](const SensorInitInfo &sensorInfo, bool success)
-    {
-        if (success)
-        {
-            rocketLogger->logInfo(sensorInfo.name + " sensor initialized" +
-                                  (sensorInfo.address.has_value() ? " on address " + std::to_string(sensorInfo.address.value()) : ""));
-        }
-        else
-        {
-            rocketLogger->logError("Failed to initialize " + sensorInfo.name + " sensor" +
-                                   (sensorInfo.address.has_value() ? " on address " + std::to_string(sensorInfo.address.value()) : ""));
-        }
-    };
-
-    // Initialize all sensors
-    for (const auto &sensorInfo : sensors)
-    {
-        bool initSuccess = sensorInfo.sensor->init();
-
-        logInitializationResult(sensorInfo, initSuccess);
-    }
+    checkSensorsStatus();
 
     rocketLogger->logInfo("Setup complete.");
     Serial.write(rocketLogger->getJSONAll().dump(4).c_str());
@@ -109,13 +64,14 @@ void loop()
     {
         rocketLogger->logError("Data packet too big to transmit.");
         // Split the JSON data into smaller packets by selecting JSON objects one by one and transmit them
-        for(auto &data : rocketLogger->getJSONAll())
+        for (auto &data : rocketLogger->getJSONAll())
         {
             auto response = loraTransmitter->transmit(data);
             if (response.getCode() != RESPONSE_STATUS::E220_SUCCESS)
             {
                 rocketLogger->logError(("Failed to transmit data with error: " + response.getDescription() + " (" + String(response.getCode()) + ")").c_str());
-            } else if (response.getCode() == RESPONSE_STATUS::ERR_E220_PACKET_TOO_BIG)
+            }
+            else if (response.getCode() == RESPONSE_STATUS::ERR_E220_PACKET_TOO_BIG)
             {
                 rocketLogger->logError("Data packet too big to transmit.");
                 // Log the json object's content element by element
@@ -132,6 +88,67 @@ void loop()
     }
     Serial.write(rocketLogger->getJSONAll().dump(4).c_str());
     rocketLogger->clearData();
-    delay(2000);
+    non_blocking_delay(1000);
 }
-*/
+
+void checkTransmitterStatus(ResponseStatusContainer &transmitterStatus)
+{
+    if (transmitterStatus.getCode() == RESPONSE_STATUS::E220_SUCCESS)
+    {
+        rocketLogger->logInfo(
+            ("LoRa transmitter initialized with configuration: " +
+             static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
+                .c_str());
+    }
+    else
+    {
+        rocketLogger->logError(
+            ("Failed to initialize LoRa transmitter with error: " +
+             transmitterStatus.getDescription() +
+             " (" + String(transmitterStatus.getCode()) + ")")
+                .c_str());
+        rocketLogger->logInfo(("Current configuration: " +
+                               static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
+                                  .c_str());
+    }
+}
+
+void checkSensorsStatus()
+{
+    // Define a struct to store sensor initialization information
+    struct SensorInitInfo
+    {
+        ISensor *sensor;
+        std::string name;
+        std::optional<int> address;
+    };
+
+    // Utility vector to initialize all sensors in a loop
+    std::vector<SensorInitInfo> sensors = {
+        // {bme680, "BME680", BME680_I2C_ADDR_1},
+        {mprls, "MPRLS", MPRLS_I2C_ADDR},
+        {bno055, "BNO055", BNO055_I2C_ADDR}};
+
+    // Lambda function to log sensor initialization result based on initialization success
+    auto logInitializationResult = [&](const SensorInitInfo &sensorInfo, bool success)
+    {
+        if (success)
+        {
+            rocketLogger->logInfo(sensorInfo.name + " sensor initialized" +
+                                  (sensorInfo.address.has_value() ? " on address " + std::to_string(sensorInfo.address.value()) : ""));
+        }
+        else
+        {
+            rocketLogger->logError("Failed to initialize " + sensorInfo.name + " sensor" +
+                                   (sensorInfo.address.has_value() ? " on address " + std::to_string(sensorInfo.address.value()) : ""));
+        }
+    };
+
+    // Initialize all sensors
+    for (const auto &sensorInfo : sensors)
+    {
+        bool initSuccess = sensorInfo.sensor->init();
+
+        logInitializationResult(sensorInfo, initSuccess);
+    }
+}
