@@ -4,18 +4,22 @@
 #include "sensors/BME680/BME680Sensor.hpp"
 #include "sensors/BNO055/BNO055Sensor.hpp"
 #include "utils/logger/rocket_logger/RocketLogger.hpp"
+#include <SPI.h>
+#include <SD.h>
 
 ILogger* rocketLogger;
 ISensor* bme680;
 ISensor* bme680_2;
 ISensor* bno055;
+File logfile;
 
 void setup()
 {
     Serial.begin(115200);
     while (!Serial)
         ;
-
+    SD.begin();
+    logfile = SD.open("logs.txt", FILE_WRITE);
     rocketLogger = new RocketLogger();
     bme680 = new BME680Sensor();
     bme680_2 = new BME680Sensor();
@@ -47,7 +51,9 @@ void loop()
         rocketLogger->logSensorData(bno055Value.value());
     }
 
-    Serial.write(rocketLogger->getJSONAll().dump().c_str());
+
+    logfile.print(rocketLogger->getJSONAll().dump().c_str());
+    logfile.flush();
     rocketLogger->clearData();
     delay(1000);
 }
