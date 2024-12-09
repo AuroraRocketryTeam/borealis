@@ -14,10 +14,13 @@
 #include "sensors/MPRLS/MPRLSSensor.hpp"
 #include "telemetry/LoRa/E220LoRaTransmitter.hpp"
 
+#define I2C_MULTIPLEXER_ADDRESS 0x70
+
 ILogger *rocketLogger;
 // ISensor *bme680;
 ISensor *bno055;
-ISensor *mprls;
+ISensor *mprls_1;
+ISensor *mprls_2;
 // ITransmitter *loraTransmitter;
 // HardwareSerial loraSerial(LORA_SERIAL);
 
@@ -32,7 +35,8 @@ struct SensorInfo
 // Vector of sensors to initialize (add the used sensors here)
 std::vector<SensorInfo> sensors = {
     // {bme680, "BME680", BME680_I2C_ADDR_1},
-    {mprls, "MPRLS", MPRLS_I2C_ADDR},
+    {mprls_1, "MPRLS_1", MPRLS_I2C_ADDR},
+    {mprls_2, "MPRLS_2", MPRLS_I2C_ADDR},
     {bno055, "BNO055", BNO055_I2C_ADDR}};
 
 // void logTransmitterStatus(ResponseStatusContainer &transmitterStatus);
@@ -40,6 +44,7 @@ std::vector<SensorInfo> sensors = {
 void logInitializationResult(const std::string &sensorName, const std::optional<int> &address, bool success);
 bool initSensor(ISensor *sensor, const std::string &name, const std::optional<int> &address);
 void initAllSensorsAndLogStatus();
+void selectDevice(uint8_t bus);
 
 void setup()
 {
@@ -51,7 +56,8 @@ void setup()
     //! TODO: Delete after testing phase is over.
     delay(500);
     // bme680 = new BME680Sensor(BME680_I2C_ADDR_1);
-    mprls = new MPRLSSensor();
+    mprls_1 = new MPRLSSensor();
+    mprls_2 = new MPRLSSensor();
     bno055 = new BNO055Sensor();
     // loraTransmitter = new E220LoRaTransmitter(loraSerial, LORA_AUX, LORA_M0, LORA_M1);
 
@@ -73,6 +79,15 @@ void loop()
     // Read data from all sensors inside the sensors vector and log it.
     for (const auto &[sensor, name, address] : sensors)
     {
+        // selectDevice(n) seleziona il device collegato a SDn e SCn nel multiplexer
+        if (name == "MPRLS_1")
+        {
+            selectDevice(2);
+        }
+        else if (name == "MPRLS_2")
+        {
+            selectDevice(3);
+        }
         auto data = sensor->getData();
         if (data.has_value())
         {
@@ -155,4 +170,11 @@ void initAllSensorsAndLogStatus()
     {
         initSensor(sensor, name, address);
     }
+}
+
+void selectDevice(uint8_t bus)
+{
+    Wire.beginTransmission(I2C_MULTIPLEXER_ADDRESS);
+    Wire.write(1 << bus);
+    Wire.endTransmission();
 }
