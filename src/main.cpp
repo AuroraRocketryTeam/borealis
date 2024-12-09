@@ -34,13 +34,10 @@ struct SensorInfo
 
 // Vector of sensors to initialize (add the used sensors here)
 std::vector<SensorInfo> sensors = {
-    // {bme680, "BME680", BME680_I2C_ADDR_1},
     {mprls_1, "MPRLS_1", MPRLS_I2C_ADDR},
     {mprls_2, "MPRLS_2", MPRLS_I2C_ADDR},
     {bno055, "BNO055", BNO055_I2C_ADDR}};
 
-// void logTransmitterStatus(ResponseStatusContainer &transmitterStatus);
-// void logTransmissionResponse(ResponseStatusContainer &response);
 void logInitializationResult(const std::string &sensorName, const std::optional<int> &address, bool success);
 bool initSensor(ISensor *sensor, const std::string &name, const std::optional<int> &address);
 void initAllSensorsAndLogStatus();
@@ -50,25 +47,17 @@ void setup()
 {
     rocketLogger = new RocketLogger();
     rocketLogger->logInfo("Setup started.");
-
-    // loraSerial.begin(SERIAL_BAUD_RATE, SERIAL_8N1, LORA_RX_PIN, LORA_TX_PIN);
     Serial.begin(SERIAL_BAUD_RATE);
     //! TODO: Delete after testing phase is over.
     delay(500);
-    // bme680 = new BME680Sensor(BME680_I2C_ADDR_1);
     mprls_1 = new MPRLSSensor();
     mprls_2 = new MPRLSSensor();
     bno055 = new BNO055Sensor();
-    // loraTransmitter = new E220LoRaTransmitter(loraSerial, LORA_AUX, LORA_M0, LORA_M1);
-
-    // auto transmitterStatus = loraTransmitter->init();
-    // logTransmitterStatus(transmitterStatus);
 
     initAllSensorsAndLogStatus();
 
     rocketLogger->logInfo("Setup complete.");
-    // auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
-    //  logTransmissionResponse(response);
+
     //! TODO: Delete after testing phase is over.
     delay(2000);
     Serial.write(rocketLogger->getJSONAll().dump(4).c_str());
@@ -80,13 +69,9 @@ void loop()
     for (const auto &[sensor, name, address] : sensors)
     {
         // selectDevice(n) seleziona il device collegato a SDn e SCn nel multiplexer
-        if (name == "MPRLS_1")
+        if (name == "MPRLS_2")
         {
-            selectDevice(2);
-        }
-        else if (name == "MPRLS_2")
-        {
-            selectDevice(3);
+            selectDevice(0);
         }
         auto data = sensor->getData();
         if (data.has_value())
@@ -94,17 +79,13 @@ void loop()
             rocketLogger->logSensorData(data.value());
         }
     }
-    // rocketLogger->logInfo(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)).c_str());
-    // auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
-    // logTransmissionResponse(response);
+
     Serial.println("######################################");
     Serial.write((rocketLogger->getJSONAll().dump(4) + "\n").c_str());
     Serial.println("######################################");
     //! TODO: Delete after testing phase is over.
-    delay(205);
+    delay(500);
     rocketLogger->clearData();
-
-    // non_blocking_delay(1000);
 }
 
 // Log transmitter initialization status
@@ -130,7 +111,7 @@ void loop()
 //     }
 // }
 
-// // Log data transmission response
+// Log data transmission response
 // void logTransmissionResponse(ResponseStatusContainer &response)
 // {
 //     response.getCode() != RESPONSE_STATUS::E220_SUCCESS
@@ -141,18 +122,12 @@ void loop()
 // Log a sensor initialization status
 void logInitializationResult(const std::string &sensorName, const std::optional<int> &address, bool success)
 {
-    std::string addressInfo = address.has_value()
-                                  ? " on address " + std::to_string(address.value())
-                                  : "";
+    std::string addressInfo = 
+    address.has_value() ? " on address " + std::to_string(address.value())
+                        : "";
 
-    if (success)
-    {
-        rocketLogger->logInfo(sensorName + " sensor initialized" + addressInfo);
-    }
-    else
-    {
-        rocketLogger->logError("Failed to initialize " + sensorName + " sensor" + addressInfo);
-    }
+    success ? rocketLogger->logInfo(sensorName + " sensor initialized" + addressInfo)
+            : rocketLogger->logError("Failed to initialize " + sensorName + " sensor" + addressInfo);
 }
 
 // Initialize a sensor
