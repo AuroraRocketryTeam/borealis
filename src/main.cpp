@@ -18,8 +18,8 @@ ILogger *rocketLogger;
 // ISensor *bme680;
 ISensor *bno055;
 ISensor *mprls;
-ITransmitter *loraTransmitter;
-HardwareSerial loraSerial(LORA_SERIAL);
+// ITransmitter *loraTransmitter;
+// HardwareSerial loraSerial(LORA_SERIAL);
 
 // Struct to store sensor information for initialization and logging
 struct SensorInfo
@@ -35,8 +35,8 @@ std::vector<SensorInfo> sensors = {
     {mprls, "MPRLS", MPRLS_I2C_ADDR},
     {bno055, "BNO055", BNO055_I2C_ADDR}};
 
-void logTransmitterStatus(ResponseStatusContainer &transmitterStatus);
-void logTransmissionResponse(ResponseStatusContainer &response);
+// void logTransmitterStatus(ResponseStatusContainer &transmitterStatus);
+// void logTransmissionResponse(ResponseStatusContainer &response);
 void logInitializationResult(const std::string &sensorName, const std::optional<int> &address, bool success);
 bool initSensor(ISensor *sensor, const std::string &name, const std::optional<int> &address);
 void initAllSensorsAndLogStatus();
@@ -46,23 +46,23 @@ void setup()
     rocketLogger = new RocketLogger();
     rocketLogger->logInfo("Setup started.");
 
-    loraSerial.begin(SERIAL_BAUD_RATE, SERIAL_8N1, LORA_RX_PIN, LORA_TX_PIN);
+    // loraSerial.begin(SERIAL_BAUD_RATE, SERIAL_8N1, LORA_RX_PIN, LORA_TX_PIN);
     Serial.begin(SERIAL_BAUD_RATE);
     //! TODO: Delete after testing phase is over.
     delay(500);
     // bme680 = new BME680Sensor(BME680_I2C_ADDR_1);
     mprls = new MPRLSSensor();
     bno055 = new BNO055Sensor();
-    loraTransmitter = new E220LoRaTransmitter(loraSerial, LORA_AUX, LORA_M0, LORA_M1);
+    // loraTransmitter = new E220LoRaTransmitter(loraSerial, LORA_AUX, LORA_M0, LORA_M1);
 
-    auto transmitterStatus = loraTransmitter->init();
-    logTransmitterStatus(transmitterStatus);
+    // auto transmitterStatus = loraTransmitter->init();
+    // logTransmitterStatus(transmitterStatus);
 
     initAllSensorsAndLogStatus();
 
     rocketLogger->logInfo("Setup complete.");
-    auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
-    logTransmissionResponse(response);
+    // auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
+    //  logTransmissionResponse(response);
     //! TODO: Delete after testing phase is over.
     delay(2000);
     Serial.write(rocketLogger->getJSONAll().dump(4).c_str());
@@ -79,9 +79,9 @@ void loop()
             rocketLogger->logSensorData(data.value());
         }
     }
-    rocketLogger->logInfo(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)).c_str());
-    auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
-    logTransmissionResponse(response);
+    // rocketLogger->logInfo(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)).c_str());
+    // auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
+    // logTransmissionResponse(response);
     Serial.println("######################################");
     Serial.write((rocketLogger->getJSONAll().dump(4) + "\n").c_str());
     Serial.println("######################################");
@@ -93,35 +93,35 @@ void loop()
 }
 
 // Log transmitter initialization status
-void logTransmitterStatus(ResponseStatusContainer &transmitterStatus)
-{
-    if (transmitterStatus.getCode() == RESPONSE_STATUS::E220_SUCCESS)
-    {
-        rocketLogger->logInfo(
-            ("LoRa transmitter initialized with configuration: " +
-             static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
-                .c_str());
-    }
-    else
-    {
-        rocketLogger->logError(
-            ("Failed to initialize LoRa transmitter with error: " +
-             transmitterStatus.getDescription() +
-             " (" + String(transmitterStatus.getCode()) + ")")
-                .c_str());
-        rocketLogger->logInfo(("Current configuration: " +
-                               static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
-                                  .c_str());
-    }
-}
+// void logTransmitterStatus(ResponseStatusContainer &transmitterStatus)
+// {
+//     if (transmitterStatus.getCode() == RESPONSE_STATUS::E220_SUCCESS)
+//     {
+//         rocketLogger->logInfo(
+//             ("LoRa transmitter initialized with configuration: " +
+//              static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
+//                 .c_str());
+//     }
+//     else
+//     {
+//         rocketLogger->logError(
+//             ("Failed to initialize LoRa transmitter with error: " +
+//              transmitterStatus.getDescription() +
+//              " (" + String(transmitterStatus.getCode()) + ")")
+//                 .c_str());
+//         rocketLogger->logInfo(("Current configuration: " +
+//                                static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
+//                                   .c_str());
+//     }
+// }
 
-// Log data transmission response
-void logTransmissionResponse(ResponseStatusContainer &response)
-{
-    response.getCode() != RESPONSE_STATUS::E220_SUCCESS
-        ? rocketLogger->logError(("Failed to transmit data with error: " + response.getDescription() + " (" + String(response.getCode()) + ")").c_str())
-        : rocketLogger->logInfo("Data transmitted successfully.");
-}
+// // Log data transmission response
+// void logTransmissionResponse(ResponseStatusContainer &response)
+// {
+//     response.getCode() != RESPONSE_STATUS::E220_SUCCESS
+//         ? rocketLogger->logError(("Failed to transmit data with error: " + response.getDescription() + " (" + String(response.getCode()) + ")").c_str())
+//         : rocketLogger->logInfo("Data transmitted successfully.");
+// }
 
 // Log a sensor initialization status
 void logInitializationResult(const std::string &sensorName, const std::optional<int> &address, bool success)
