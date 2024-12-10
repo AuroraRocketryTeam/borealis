@@ -15,12 +15,13 @@
 #include "telemetry/LoRa/E220LoRaTransmitter.hpp"
 
 #define I2C_MULTIPLEXER_ADDRESS 0x70
+#define I2C_MULTIPLEXER_BUS_NUMBER 0 // 0 = SD0 and SC0, 1 = SD1 and SC1, 2 = SD2 and SC2 ...
 
 ILogger *rocketLogger;
 // ISensor *bme680;
 ISensor *bno055;
-ISensor *mprls_1;
-ISensor *mprls_2;
+// ISensor *mprls_1;
+// ISensor *mprls_2;
 // ITransmitter *loraTransmitter;
 // HardwareSerial loraSerial(LORA_SERIAL);
 
@@ -34,8 +35,8 @@ struct SensorInfo
 
 // Vector of sensors to initialize (add the used sensors here)
 std::vector<SensorInfo> sensors = {
-    {mprls_1, "MPRLS_1", MPRLS_I2C_ADDR},
-    {mprls_2, "MPRLS_2", MPRLS_I2C_ADDR},
+    // {mprls_1, "MPRLS_1", MPRLS_I2C_ADDR},
+    // {mprls_2, "MPRLS_2", MPRLS_I2C_ADDR},
     {bno055, "BNO055", BNO055_I2C_ADDR}};
 
 void logInitializationResult(const std::string &sensorName, const std::optional<int> &address, bool success);
@@ -50,8 +51,8 @@ void setup()
     Serial.begin(SERIAL_BAUD_RATE);
     //! TODO: Delete after testing phase is over.
     delay(500);
-    mprls_1 = new MPRLSSensor();
-    mprls_2 = new MPRLSSensor();
+    // mprls_1 = new MPRLSSensor();
+    // mprls_2 = new MPRLSSensor();
     bno055 = new BNO055Sensor();
 
     initAllSensorsAndLogStatus();
