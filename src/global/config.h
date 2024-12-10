@@ -25,4 +25,4 @@
 /* Uncomment the following line to enable RSSI */
 #define ENABLE_RSSI
 
-#define SERIAL_BAUD_RATE 9600
+#define SERIAL_BAUD_RATE 9600 // !NOTE Do not change as the LoRa module causes issues with higher baud rates. Needs testing.
