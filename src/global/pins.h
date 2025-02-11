@@ -27,6 +27,14 @@
 #define LORA_AUX 4
 #define LORA_M0 5
 #define LORA_M1 6
+
+// SD Card pins.
+#define SD_CLK 18 // D9 pin on nano esp32
+#define SD_SO 21 // D10 pin on nano esp32
+#define SD_CS 7 // D4 pin on nano esp32
+#define SD_D1 47 // D12 pin on nano esp32
+#define SD_DET 48 // D13 pin on nano esp32
+
 // Add here some other pin.
 
 
