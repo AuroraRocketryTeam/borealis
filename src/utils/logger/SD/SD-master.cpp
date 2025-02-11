@@ -78,6 +78,7 @@ bool SD::writeFile(std::string filename, std::variant<std::string, String, char 
 
 /**
  * @brief Reads the content of a file from start to end.
+ * @note You need to free the memory after using the content.
  *
  * @return char* the content of the file.
  */
