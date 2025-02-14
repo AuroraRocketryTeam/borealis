@@ -4,15 +4,15 @@
  * @brief PIN definition.
  * @version 0.1
  * @date 2024-10-02
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 #pragma once
 
 /**
  * @brief I2C STD PIN.
- * 
+ *
  */
 // Pin I2C.
 #define I2C_SDA 11
@@ -29,12 +29,9 @@
 #define LORA_M1 6
 
 // SD Card pins.
-#define SD_CLK D13 // D9 pin on nano esp32
-#define SD_SO D12// D10 pin on nano esp32
-#define SD_SI D11 // D11 pin on nano esp32
-#define SD_CS D7 // D7 pin on nano esp32
-
+#define SD_CLK D13
+#define SD_SO D12
+#define SD_SI D11
+#define SD_CS D7
 
 // Add here some other pin.
-
-
