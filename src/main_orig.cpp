@@ -13,10 +13,16 @@
 #include "sensors/BNO055/BNO055Sensor.hpp"
 #include "sensors/MPRLS/MPRLSSensor.hpp"
 #include "telemetry/LoRa/E220LoRaTransmitter.hpp"
+#include "utils/logger/SD/SD-master.hpp"
 
 using TransmitDataType = std::variant<char*, String, std::string, nlohmann::json>;
 
 ILogger *rocketLogger;
+<<<<<<< HEAD:src/main_orig.cpp
+=======
+ILogger *dataLogger;
+SD *sdModule;
+>>>>>>> 7c33783 ([MAIN] Add SD card support):src/main.cpp
 ISensor *bno055;
 ISensor *mprls1;
 ISensor *mprls2;
@@ -32,6 +38,12 @@ void setup()
 {
     rocketLogger = new RocketLogger();
     rocketLogger->logInfo("Setup started.");
+
+    dataLogger = new RocketLogger();
+
+    sdModule = new SD();
+
+    sdModule->init() ? rocketLogger->logInfo("SD card initialized.") : rocketLogger->logError("Failed to initialize SD card.");
 
     loraSerial.begin(SERIAL_BAUD_RATE, SERIAL_8N1, LORA_RX_PIN, LORA_TX_PIN);
     Serial.begin(SERIAL_BAUD_RATE);
@@ -54,6 +66,11 @@ void setup()
     rocketLogger->logInfo("Setup complete.");
     auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
     logTransmissionResponse(response);
+    //! TODO: Delete after testing phase is over.
+    delay(2000);
+    Serial.write(rocketLogger->getJSONAll().dump(4).c_str());
+    sdModule->writeFile("log.json", rocketLogger->getJSONAll().dump(4));
+    rocketLogger->clearData();
 }
 
 void loop()
@@ -62,26 +79,39 @@ void loop()
         auto bno055_data = bno055->getData();
         if (bno055_data.has_value())
         {
-            rocketLogger->logSensorData(bno055_data.value());
-        }
-
-        tcaSelect(I2C_MULTIPLEXER_MPRLS1);
-        auto mprls1_data = mprls1->getData();
-        if (mprls1_data.has_value())
-        {
-            rocketLogger->logSensorData(mprls1_data.value());
-        }
-
-        tcaSelect(I2C_MULTIPLEXER_MPRLS2);
-        auto mprls2_data = mprls2->getData();
-        if (mprls2_data.has_value())
-        {
-            rocketLogger->logSensorData(mprls2_data.value());
+            dataLogger->logSensorData(data.value());
         }
     }
-    rocketLogger->logInfo(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)).c_str());
-    auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
+
+    //! TODO: Test overhead of writing to SD card.
+    //* note: Implement a separate task (thread) for writing to SD card. This will prevent the main loop from blocking.
+    //*         The task should be able to write data to the SD card at a fixed interval (e.g. every 500ms).
+
+    // Write SENSORs data to SD data.json file
+    sdModule->openFile("data.json");
+    sdModule->writeFile("data.json", dataLogger->getJSONAll().dump(4));
+    sdModule->closeFile();
+
+    //* note: Implement a separate task (thread) for transmitting data over LoRa. This will prevent the main loop from blocking.
+    //*         The task should be able to transmit data over LoRa at a fixed interval (e.g. every 500ms).
+    auto response = loraTransmitter->transmit(dataLogger->getJSONAll());
     logTransmissionResponse(response);
+
+    // Write transmission response to SD log.json file
+    sdModule->openFile("log.json");
+    sdModule->writeFile("log.json", rocketLogger->getJSONAll().dump(4));
+    sdModule->closeFile();
+
+    //! TODO: Delete after testing phase is over.
+    Serial.println("################## SENSOR DATA START ####################");
+    Serial.write((dataLogger->getJSONAll().dump(4) + "\n").c_str());
+    Serial.println("################## SENSOR DATA END ######################\n");
+
+    Serial.println("################## LOG INFO START ####################");
+    Serial.write((rocketLogger->getJSONAll().dump(4) + "\n").c_str());
+    Serial.println("################## LOG INFO END ######################\n");
+    delay(250);     //! TODO: Delete after testing phase is over.
+    dataLogger->clearData();
     rocketLogger->clearData();
 }
 
@@ -106,6 +136,7 @@ void logTransmitterStatus(ResponseStatusContainer &transmitterStatus)
                                static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)))
                                   .c_str());
     }
+
 }
 
 // Log data transmission response
