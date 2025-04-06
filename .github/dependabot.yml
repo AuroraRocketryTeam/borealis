@@ -1,15 +1,15 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"                       # directory contenente .github/workflows/
+  - package-ecosystem: "platformio"
+    directory: "/"  # directory contenente il file platformio.ini
     schedule:
-      interval: "weekly"                 # controlla settimanalmente aggiornamenti
-      day: "sunday"                      # puoi cambiare: monday, tuesday, ...
-      time: "08:00"                      # UTC
+      interval: "weekly"   # o daily, monthly, a seconda delle tue esigenze
+      day: "sunday"        # puoi cambiarlo
+      time: "08:00"        # in UTC
     commit-message:
       prefix: "chore"
       include: "scope"
     labels:
       - "dependencies"
-      - "github-actions"
+      - "platformio"
     open-pull-requests-limit: 5
