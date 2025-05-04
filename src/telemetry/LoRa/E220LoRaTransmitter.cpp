@@ -2,9 +2,9 @@
 #include "global/pins.h"
 
 /**
- * @brief Initializa the LoRa module with default configuration.
- * 
- * @return ResponseStatusContainer 
+ * @brief Initialize the LoRa module with default configuration.
+ *
+ * @return ResponseStatusContainer
  */
 ResponseStatusContainer E220LoRaTransmitter::init()
 {
@@ -17,9 +17,9 @@ ResponseStatusContainer E220LoRaTransmitter::init()
 
     configuration.CHAN = 23;
 
-    configuration.SPEED.uartBaudRate = getBpsType();
-    configuration.SPEED.airDataRate = AIR_DATA_RATE_111_625;
-    configuration.SPEED.uartParity = MODE_00_8N1;
+    configuration.SPED.uartBaudRate = getBpsType();
+    configuration.SPED.airDataRate = AIR_DATA_RATE_111_625;
+    configuration.SPED.uartParity = MODE_00_8N1;
 
     configuration.OPTION.subPacketSetting = SPS_200_00;
     configuration.OPTION.RSSIAmbientNoise = RSSI_AMBIENT_NOISE_DISABLED;
@@ -49,7 +49,7 @@ ResponseStatusContainer E220LoRaTransmitter::init(Configuration config)
 std::vector<uint8_t> convertToByteArray(const TransmitDataType &data)
 {
     std::string sData;
-
+    const char terminator = 0x17;
     if (std::holds_alternative<char *>(data))
     {
         sData = std::get<char *>(data);
@@ -70,25 +70,19 @@ std::vector<uint8_t> convertToByteArray(const TransmitDataType &data)
     {
         return {};
     }
-
+    // Aggiungi il terminatore null se non è già presente
+    if (sData.back() != terminator)
+    {
+        sData += terminator;
+    }
+    
     return std::vector<uint8_t>(sData.begin(), sData.end());
 }
 
 std::vector<uint8_t> compressData(std::vector<uint8_t> data)
 {
-    // use zstd to compress the data
-    size_t compressedSize = ZSTD_compressBound(data.size());
-    std::vector<uint8_t> compressedData(compressedSize);
-
-    compressedSize = ZSTD_compress(compressedData.data(), compressedSize, data.data(), data.size(), 1);
-
-    if (ZSTD_isError(compressedSize))
-    {
-        return {};
-    }
-
-    compressedData.resize(compressedSize);
-    return compressedData;
+    //TODO: use delta encoding to compress the data
+    return data;
 }
 
 ResponseStatusContainer E220LoRaTransmitter::transmit(TransmitDataType data)
@@ -116,17 +110,40 @@ ResponseStatusContainer E220LoRaTransmitter::transmit(TransmitDataType data)
         uint8_t payloadSize = std::min(dataLength - offset, static_cast<size_t>(MAX_PAYLOAD_SIZE));
         // Dimensione del payload
         packet.header.payloadSize = payloadSize;
-        // Dimensione totale del pacchetto (TODO: Valutare di padding per arrivare sempre a 199 byte)
-        packet.header.chunkSize = payloadSize + sizeof(PacketHeader) + sizeof(uint16_t);
-
+        packet.header.chunkSize = payloadSize + HEADER_SIZE + CRC_SIZE;
         // Suddivisione del pacchetto in chunk
         memcpy(packet.payload.data, compressedData.data() + offset, payloadSize);
 
+        if(payloadSize < MAX_PAYLOAD_SIZE)
+        {
+            // Se il chunk è più piccolo del massimo, riempi con 1 dopo il termine del payload
+            memset(packet.payload.data + payloadSize, 0x01, MAX_PAYLOAD_SIZE - payloadSize);
+            // Aggiorna la dimensione del payload
+            packet.header.payloadSize = MAX_PAYLOAD_SIZE;
+            packet.header.chunkSize = MAX_PAYLOAD_SIZE + HEADER_SIZE + CRC_SIZE;
+        }
+
         packet.calculateCRC();
+        // Per debug: Stampa tutto il pacchetto in esadecimale
+        Serial.println("########## HEADER ##########");
+        Serial.println("Packet Number: " + String(packet.header.packetNumber));
+        Serial.println("Total Chunks: " + String(packet.header.totalChunks));
+        Serial.println("Chunk Number: " + String(packet.header.chunkNumber));
+        Serial.println("Chunk Size: " + String(packet.header.chunkSize));
+        Serial.println("Payload Size: " + String(packet.header.payloadSize));
+        Serial.println("Timestamp: " + String(packet.header.timestamp));
+        Serial.println("########## PAYLOAD ##########");
+        for (int i = 0; i < MAX_PAYLOAD_SIZE; i++)
+        {
+            Serial.print(String(packet.payload.data[i], HEX) + " ");
+        }
+        Serial.println();
+        Serial.println("CRC: " + String(packet.crc, HEX));
 
         auto rc = this->transmitter.sendFixedMessage(LORA_RECEIVER_ADDH, LORA_RECEIVER_ADDL, LORA_CHANNEL,
                                                      &packet, sizeof(Packet));
-        // Delay per evitare collisioni, empiricamente il minimo è 30ms.
+        /* Delay per evitare collisioni (perdita di pacchetti),
+            empiricamente il minimo è 30ms a distanza ravvicinata. */
         delay(30);
 
         if (rc.code != E220_SUCCESS)
@@ -134,7 +151,8 @@ ResponseStatusContainer E220LoRaTransmitter::transmit(TransmitDataType data)
             return ResponseStatusContainer(rc.code, rc.getResponseDescription());
         }
         packet.header.chunkNumber++;
-        offset += payloadSize;       // Sposta l'offset al prossimo chunk
+        // Sposta l'offset al prossimo chunk
+        offset += payloadSize;
     }
 
     return ResponseStatusContainer(E220_SUCCESS, "Data sent successfully.");
@@ -160,9 +178,9 @@ String E220LoRaTransmitter::getConfigurationString(Configuration configuration) 
     result += "AddH : " + String(configuration.ADDH, HEX) + "\n";
     result += "AddL : " + String(configuration.ADDL, HEX) + "\n\n";
     result += "Chan : " + String(configuration.CHAN, DEC) + " -> " + configuration.getChannelDescription() + "\n\n";
-    result += "SpeedParityBit     : " + String(configuration.SPEED.uartParity, BIN) + " -> " + configuration.SPEED.getUARTParityDescription() + "\n";
-    result += "SpeedUARTDatte     : " + String(configuration.SPEED.uartBaudRate, BIN) + " -> " + configuration.SPEED.getUARTBaudRateDescription() + "\n";
-    result += "SpeedAirDataRate   : " + String(configuration.SPEED.airDataRate, BIN) + " -> " + configuration.SPEED.getAirDataRateDescription() + "\n\n";
+    result += "SpeedParityBit     : " + String(configuration.SPED.uartParity, BIN) + " -> " + configuration.SPED.getUARTParityDescription() + "\n";
+    result += "SpeedUARTDatte     : " + String(configuration.SPED.uartBaudRate, BIN) + " -> " + configuration.SPED.getUARTBaudRateDescription() + "\n";
+    result += "SpeedAirDataRate   : " + String(configuration.SPED.airDataRate, BIN) + " -> " + configuration.SPED.getAirDataRateDescription() + "\n\n";
     result += "OptionSubPacketSett: " + String(configuration.OPTION.subPacketSetting, BIN) + " -> " + configuration.OPTION.getSubPacketSetting() + "\n";
     result += "OptionTranPower    : " + String(configuration.OPTION.transmissionPower, BIN) + " -> " + configuration.OPTION.getTransmissionPowerDescription() + "\n";
     result += "OptionRSSIAmbientNo: " + String(configuration.OPTION.RSSIAmbientNoise, BIN) + " -> " + configuration.OPTION.getRSSIAmbientNoiseEnable() + "\n\n";
