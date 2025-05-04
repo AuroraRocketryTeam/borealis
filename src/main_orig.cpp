@@ -26,11 +26,13 @@ ISensor *mprls2;
 ITransmitter<TransmitDataType> *loraTransmitter;
 HardwareSerial loraSerial(LORA_SERIAL);
 
-std::string temperature_log_file = "board_temperature_test.csv";
+std::string log_file = "log.json";
 
 void logTransmitterStatus(ResponseStatusContainer &transmitterStatus);
 void logTransmissionResponse(ResponseStatusContainer &response);
 void tcaSelect(uint8_t bus);
+void logToSDCard(const std::string &filename, const std::string &data);
+
 void setup()
 {
     pinMode(LED_RED, OUTPUT);
@@ -66,25 +68,10 @@ void setup()
     logTransmitterStatus(transmitterStatus);
     rocketLogger->logInfo(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)).c_str());
     rocketLogger->logInfo("Setup complete.");
+    logToSDCard(log_file, rocketLogger->getJSONAll().dump(4) + "\n");
     auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
     logTransmissionResponse(response);
-
-    std::string jsonOutput = rocketLogger->getJSONAll().dump(4) + "\n";
-    Serial.write(jsonOutput.c_str());
-
-    if (sdModule->openFile("log.json"))
-    {
-        sdModule->writeFile("log.json", jsonOutput);
-        sdModule->closeFile();
-    }
-    // sdModule->writeFile("log.json", rocketLogger->getJSONAll().dump(4));
     rocketLogger->clearData();
-    std::string csv_header = "TIME_ELAPSED_SEC,BOARD_TEMPERATURE_CEL_DEG\n";
-    if (sdModule->openFile("board_temperature_test.csv"))
-    {
-        sdModule->writeFile("board_temperature_test.csv", csv_header);
-        sdModule->closeFile();
-    }
 }
 
 void loop()
@@ -95,59 +82,6 @@ void loop()
         if (bno055_data.has_value())
         {
             rocketLogger->logSensorData(bno055_data.value());
-            // Calculate elapsed time in milliseconds
-            static unsigned long lastTime = 0; // Store the last execution time
-            unsigned long currentTime = millis();
-
-            // Execute temperature logging every 5000 milliseconds
-            if (currentTime - lastTime >= 5000)
-            {
-                lastTime = currentTime; // Update the last execution time
-                auto data_variant = bno055_data.value().getData("board_temperature");
-                int board_temperature = 0;
-                if (data_variant.has_value() && std::holds_alternative<int>(data_variant.value()))
-                {
-                    board_temperature = std::get<int>(data_variant.value());
-                }
-                else
-                {
-                    digitalWrite(LED_BLUE, LOW);
-                }
-                auto board_temperature_string = std::to_string(board_temperature);
-                // Track time since first execution
-                static unsigned long firstExecutionTime = 0;
-                if (firstExecutionTime == 0)
-                {
-                    firstExecutionTime = millis();
-                }
-
-                // Calculate total elapsed time in seconds since program started
-                unsigned long totalElapsedSeconds = (millis() - firstExecutionTime) / 1000;
-
-                auto timeString = std::to_string(totalElapsedSeconds);
-
-                String serial_output = "TIME ELAPSED: " + String(timeString.c_str()) + "s | BOARD TEMPERATURE: " + String(board_temperature_string.c_str());
-                auto csv_output_string = timeString + "," + board_temperature_string + "\n";
-                Serial.println(serial_output);
-                if (sdModule->openFile(temperature_log_file))
-                {
-                    if (sdModule->writeFile(temperature_log_file, csv_output_string))
-                    {
-                        digitalWrite(LED_GREEN, LOW); // Turn on the green LED
-                        delay(250);
-                        digitalWrite(LED_GREEN, HIGH); // Turn off the green LED
-                    }
-                    sdModule->closeFile();
-                }
-                else
-                {
-                    Serial.println("Failed to open " + String(temperature_log_file.c_str()));
-                    // Turn on the red LED to indicate error
-                    digitalWrite(LED_RED, LOW); // Turn on the red LED
-                    // Log the error
-                    rocketLogger->logError("Failed to open temperature log file");
-                }
-            }
         }
 
         tcaSelect(I2C_MULTIPLEXER_MPRLS1);
@@ -164,15 +98,9 @@ void loop()
             rocketLogger->logSensorData(mprls2_data.value());
         }
     }
+    logToSDCard(log_file, rocketLogger->getJSONAll().dump(4) + "\n");
     auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
-    // logTransmissionResponse(response);
-    // Serial.write((rocketLogger->getJSONAll().dump(4) + "\n").c_str());
-    // Serial.println("######################################");
-    if (sdModule->openFile("log.json"))
-    {
-        sdModule->writeFile("log.json", rocketLogger->getJSONAll().dump(4) + "\n");
-        sdModule->closeFile();
-    }
+
     rocketLogger->clearData();
 }
 
@@ -213,4 +141,17 @@ void tcaSelect(uint8_t bus)
     Wire.beginTransmission(0x70); // TCA9548A address
     Wire.write(1 << bus);         // send byte to select bus
     Wire.endTransmission();
+}
+
+void logToSDCard(const std::string &filename, const std::string &data)
+{
+    if (sdModule->openFile(filename))
+    {
+        sdModule->writeFile(filename, data);
+        sdModule->closeFile();
+    }
+    else
+    {
+        rocketLogger->logError("Failed to open file: " + filename);
+    }
 }
