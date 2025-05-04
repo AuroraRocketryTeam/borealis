@@ -32,6 +32,7 @@
 #define SD_CLK D13
 #define SD_SO D12
 #define SD_SI D11
-#define SD_CS D7
+#define SD_CS D10
+#define SD_DET D9
 
 // Add here some other pin.
