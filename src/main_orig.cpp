@@ -40,6 +40,7 @@ void setup()
     tcaSelect(I2C_MULTIPLEXER_MPRLS1);
     mprls1 = new MPRLSSensor();
     mprls1->init();
+
     tcaSelect(I2C_MULTIPLEXER_MPRLS2);
     mprls2 = new MPRLSSensor();
     mprls2->init();
@@ -50,14 +51,9 @@ void setup()
     loraTransmitter = new E220LoRaTransmitter(loraSerial, LORA_AUX, LORA_M0, LORA_M1);
     auto transmitterStatus = loraTransmitter->init();
     logTransmitterStatus(transmitterStatus);
-
-    // initAllSensorsAndLogStatus();
-
     rocketLogger->logInfo("Setup complete.");
     auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
     logTransmissionResponse(response);
-
-    Serial.write(rocketLogger->getJSONAll().dump(4).c_str());
 }
 
 void loop()
@@ -86,9 +82,6 @@ void loop()
     rocketLogger->logInfo(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfigurationString(*(Configuration *)(static_cast<E220LoRaTransmitter *>(loraTransmitter)->getConfiguration().data)).c_str());
     auto response = loraTransmitter->transmit(rocketLogger->getJSONAll());
     logTransmissionResponse(response);
-    Serial.write((rocketLogger->getJSONAll().dump(4) + "\n").c_str());
-    Serial.println("######################################");
-
     rocketLogger->clearData();
 }
 
