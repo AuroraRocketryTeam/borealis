@@ -1,83 +1,89 @@
 #include "BNO055Printer.hpp"
-#include "utils/PrintUtils.hpp"
+#include "../utils/PrintUtils.hpp"
 
-BNO055Printer::BNO055Printer(Adafruit_BNO055& sensor) : bno055(sensor) { }
+BNO055Printer::BNO055Printer(ISensor* sensor) : bno055(sensor) { }
 
 void BNO055Printer::displayCalibrationStatus() {
-  uint8_t system, gyro, accel, mag;
-  system = gyro = accel = mag = 0;
-  bno055.getCalibration(&system, &gyro, &accel, &mag);
+    auto data = bno055->getData();
+    if (!data.has_value()) {
+        Serial.println("ERROR: COULD NOT GET SENSOR DATA");
+        return;
+    }
+    if (!data.value().getData("system_calibration").has_value() ||
+        !data.value().getData("gyro_calibration").has_value() ||
+        !data.value().getData("accel_calibration").has_value() ||
+        !data.value().getData("mag_calibration").has_value()
+    ) {
+        Serial.println("ERROR: Could not read all calibration status variables");
+        return;
+    }
+    uint8_t system = std::get<uint8_t>(data.value().getData("system_calibration").value()),
+        gyro = std::get<uint8_t>(data.value().getData("gyro_calibration").value()),
+        accel = std::get<uint8_t>(data.value().getData("accel_calibration").value()),
+        mag = std::get<uint8_t>(data.value().getData("mag_calibration").value());
 
-  PrintUtils::printHeader("CALIBRATION STATUS: 0=not calibrated, 3=fully calibrated");
-
-  Serial.println("Sys: " + String(system));
-  Serial.println("Gyro: " + String(gyro));
-  Serial.println("Accel: " + String(accel));
-  Serial.println("Mag: " + String(mag));
-
-  Serial.println("");
-}
-
-void BNO055Printer::displaySensorDetails() {
-    sensor_t sensor;
-    bno055.getSensor(&sensor);
-
-    PrintUtils::printHeader("SENSOR DETAILS");
-
-    Serial.println("Sensor name: " + String(sensor.name));
-    Serial.println("Driver version: " + String(sensor.version));
-    Serial.println("ID: " + String(sensor.sensor_id));
-    Serial.println("Min delay (ms): " + String(sensor.min_delay));
-
+    PrintUtils::printHeader("CALIBRATION STATUS: 0=not calibrated, 3=fully calibrated");
+    Serial.println("Sys: " + String(system));
+    Serial.println("Gyro: " + String(gyro));
+    Serial.println("Accel: " + String(accel));
+    Serial.println("Mag: " + String(mag));
     Serial.println("");
 }
 
 void BNO055Printer::displayMagnetometer() {
-    imu::Vector<3> mag = bno055.getVector(Adafruit_BNO055::VECTOR_MAGNETOMETER);
-
-    PrintUtils::printHeader("MAGNETOMETER");
-
-    Serial.print("X: " + String(mag.x(), DECIMAL_PLACES));
-    Serial.print(" Y: " + String(mag.y(), DECIMAL_PLACES));
-    Serial.print(" Z: " + String(mag.z(), DECIMAL_PLACES));
+    printXYZMap("magnetometer");
     Serial.println(" uT");
-
     Serial.println("");
 }
 
 void BNO055Printer::displayOrientation() {
-    sensors_event_t event;
-    bno055.getEvent(&event);
-
-    PrintUtils::printHeader("ORIENTATION");
-
-    Serial.println("X: " + String(event.orientation.x, DECIMAL_PLACES));
-    Serial.println("Y: " + String(event.orientation.y, DECIMAL_PLACES));
-    Serial.println("Z: " + String(event.orientation.z, DECIMAL_PLACES));
-
+    printXYZMap("orientation");
     Serial.println("");
 }
 
 void BNO055Printer::displayAccelleration() {
-    imu::Vector<3> accel = bno055.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
-
-    PrintUtils::printHeader("ACCELLERATION");
-
-    Serial.println("X: " + String(accel.x(), DECIMAL_PLACES) + " m/s²");
-    Serial.println("Y: " + String(accel.y(), DECIMAL_PLACES) + " m/s²");
-    Serial.println("Z: " + String(accel.z(), DECIMAL_PLACES) + " m/s²");
-
+    printXYZMap("accelerometer");
+    Serial.println(" m/s²");
     Serial.println("");
 }
 
 void BNO055Printer::displayGyroscope() {
-    imu::Vector<3> gyro = bno055.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-
-    PrintUtils::printHeader("GYROSCOPE");
-
-    Serial.println("X: " + String(gyro.x(), DECIMAL_PLACES) + " rad/s");
-    Serial.println("Y: " + String(gyro.y(), DECIMAL_PLACES) + " rad/s");
-    Serial.println("Z: " + String(gyro.z(), DECIMAL_PLACES) + " rad/s");
-
+    printXYZMap("angular_velocity");
+    Serial.println(" rad/s");
     Serial.println("");
+}
+
+void BNO055Printer::displayLinearAccelleration() {
+    printXYZMap("linear_acceleration");
+    Serial.println("");
+}
+
+void BNO055Printer::displayGravity() {
+    printXYZMap("gravity");
+    Serial.println("");
+}
+
+void BNO055Printer::printXYZMap(const char* key) {
+    auto data = bno055->getData();
+    if (!data.has_value()) {
+        Serial.println("ERROR: COULD NOT GET SENSOR DATA");
+        return;
+    }
+
+    auto optVal = data.value().getData(key);
+    if (!optVal.has_value()) {
+        Serial.println(String("ERROR: Could not read ") + key + " values");
+        return;
+    }
+
+    auto val = std::get<std::map<std::string, float>>(data.value().getData(key).value());
+    PrintUtils::printHeader(key);
+
+    auto x = val.find("x"), y = val.find("y"), z = val.find("z");
+    if (x == val.end() || y == val.end() || z == val.end()) {
+        Serial.println(String("ERROR: Could not find all the") + key + "values");
+    }
+    Serial.print("X: " + String(x->second, DECIMAL_PLACES));
+    Serial.print(" Y: " + String(y->second, DECIMAL_PLACES));
+    Serial.print(" Z: " + String(z->second, DECIMAL_PLACES));    
 }

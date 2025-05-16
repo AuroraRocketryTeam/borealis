@@ -2,7 +2,7 @@
 #define BNO055_SENSOR_PRINTER_HPP
 
 #include <Arduino.h>
-#include <Adafruit_BNO055.h>
+#include "sensors/ISensor.hpp"
 
 /**
  * @class BNO055Printer
@@ -12,23 +12,25 @@
  * from a BNO055 inertial measurement unit using the Adafruit_BNO055 library.
  *
  * The class does not own the sensor instance; it keeps a reference to an
- * existing Adafruit_BNO055 object, allowing the caller to manage sensor
+ * existing BNO055Sensor object, allowing the caller to manage sensor
  * initialization and configuration.
  * 
  * @author eric.aquilotti@aurorarocketry.eu
  */
 class BNO055Printer {
     public:
-        BNO055Printer(Adafruit_BNO055& sensor);
+        BNO055Printer(ISensor* sensor);
         void displayCalibrationStatus();
-        void displaySensorDetails();
         void displayOrientation();
         void displayAccelleration();
         void displayGyroscope();
         void displayMagnetometer();
+        void displayLinearAccelleration();
+        void displayGravity();
 
     private:
-        Adafruit_BNO055& bno055;
+        ISensor* bno055;
+        void printXYZMap(const char* key);
 };
 
 #endif
