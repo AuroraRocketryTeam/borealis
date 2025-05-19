@@ -28,15 +28,42 @@
 // It will also use the magnetometer to align the Z axis with the North. We might not get exact Norht since the readings
 // might be modified by the presence of the aluminum frame. It is just to get a rough idea of the North.
 
+float standard_deviation(const std::vector<Eigen::Vector3f>& readings) {
+    Eigen::Vector3f mean = Eigen::Vector3f::Zero();
+    for (const auto& reading : readings) {
+        mean += reading;
+    }
+    mean /= readings.size();
+
+    float sum_squared_diff = 0.0f;
+    for (const auto& reading : readings) {
+        Eigen::Vector3f diff = reading - mean;
+        sum_squared_diff += diff.squaredNorm(); // (dot prod of a vector with itself)
+    }
+    return sqrt(sum_squared_diff / (readings.size()-1));
+}
+
 int main() {
 
-    // Gravity vector got from the accelerometer
-    std::vector<Eigen::Vector3f> gravity_readings;
-    for (int i = 0; i < 200; ++i) {
-        // Simulate reading from accelerometer
-        Eigen::Vector3f reading(0, 0, 9.81); // Replace with actual reading of accelerometer
-        gravity_readings.push_back(reading);
-        // delay(10); // Simulate delay between readings
+    Eigen::Vector3f TolSTD(0.1, 0.1, 0.1); // Tolerance for standard deviation
+    Eigen::Vector3f std(1, 1, 1); // Standard deviation of the gravity readings
+
+    while ((std.array() > TolSTD.array()).any()) {
+        // Gravity vector got from the accelerometer
+        std::vector<Eigen::Vector3f> gravity_readings;
+        for (int i = 0; i < 200; ++i) {
+            // Simulate reading from accelerometer
+            Eigen::Vector3f reading(0, 0, 9.81); // Replace with actual reading of accelerometer
+            gravity_readings.push_back(reading);
+            // delay(10); // Simulate delay between readings
+        }
+        Eigen::Vector3f std = standard_deviation(gravity_readings);
+        if ((std.array() > TolSTD.array()).any()) {
+            std::cout << "Standard deviation too high, repeat calibration." << std::endl;
+            // delay(1000); // Simulate delay before next calibration attempt
+        } else {
+            std::cout << "Measuring succesful!" << std::endl;
+        }
     }
     // TO DO: COMPUTE STANDARD DEVIATION OF THE GRAVITY READINGS, IF TOO HIGH, REPEAT THE CALIBRATION
 
