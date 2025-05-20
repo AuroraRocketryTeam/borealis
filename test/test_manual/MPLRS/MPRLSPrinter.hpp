@@ -20,7 +20,7 @@
 class MPRLSPrinter {
     public:
         MPRLSPrinter(ISensor* sensor);
-
+        void displayPressure();
     private:
         ISensor* mprls;
 };
