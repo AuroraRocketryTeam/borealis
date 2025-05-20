@@ -1,10 +1,10 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "BNO055/BNO055Printer.hpp"
-#include "sensors/ISensor.hpp"
-#include "sensors/BNO055/BNO055Sensor.hpp"
-#include <global/config.h>
-#include <global/pins.h>
+#include <ISensor.hpp>
+#include <BNO055Sensor.hpp>
+#include <config.h>
+#include <pins.h>
 
 /**
  * To use this file change the extension from .disabled to .cpp and change the

@@ -2,7 +2,7 @@
 #define BNO055_SENSOR_PRINTER_HPP
 
 #include <Arduino.h>
-#include "sensors/ISensor.hpp"
+#include <ISensor.hpp>
 
 /**
  * @class BNO055Printer
