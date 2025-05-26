@@ -1,4 +1,4 @@
-/*
+
 // Macros needed for a conflict between similar macro variables names of Arduino.h and Eigen.h
 #ifdef B1
 #undef B1
@@ -97,9 +97,11 @@ int main() {
     Eigen::Quaternionf initial_quaternion = q_yaw * q_rot;
     initial_quaternion.normalize();
 
-    // Bias of the accelerometer
-    Eigen::Vector3f initial_gravity = initial_quaternion * gravity;
-    Eigen::Vector3f bias_a = initial_gravity - expected_gravity;
+    // Bias of the accelerometer. gravity is in ENU coordinates, so we need to rotate it to match the sensor's frame of reference.
+    Eigen::Vector3f q_absolute_to_body = initial_quaternion.conjugate();
+    Eigen::Vector3f initial_gravity_body = q_absolute_to_local * gravity;
+    Eigen::Vector3f expected_gravity_body = q_absolute_to_local * expected_gravity;
+    Eigen::Vector3f bias_a = initial_gravity_body - expected_gravity_body;
 
     // Bias of the gyroscope
     Eigen::Vector3f initial_omega(0, 0, 0); // Mean of various readings
@@ -107,4 +109,3 @@ int main() {
 
     return 0;
 }
-*/
