@@ -28,19 +28,21 @@
 // It will also use the magnetometer to align the Z axis with the North. We might not get exact Norht since the readings
 // might be modified by the presence of the aluminum frame. It is just to get a rough idea of the North.
 
-float standard_deviation(const std::vector<Eigen::Vector3f>& readings) {
+Eigen::Vector3f standard_deviation(const std::vector<Eigen::Vector3f>& readings) {
     Eigen::Vector3f mean = Eigen::Vector3f::Zero();
     for (const auto& reading : readings) {
         mean += reading;
     }
     mean /= readings.size();
 
-    float sum_squared_diff = 0.0f;
+    Eigen::Vector3f variance = Eigen::Vector3f::Zero();
     for (const auto& reading : readings) {
         Eigen::Vector3f diff = reading - mean;
-        sum_squared_diff += diff.squaredNorm(); // (dot prod of a vector with itself)
+        variance += diff.cwiseProduct(diff); // componente a componente: (x^2, y^2, z^2)
     }
-    return sqrt(sum_squared_diff / (readings.size()-1));
+    variance /= static_cast<float>(readings.size() - 1);
+
+    return variance.cwiseSqrt(); // raíz cuadrada componente a componente
 }
 
 int main() {
