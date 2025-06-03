@@ -93,16 +93,18 @@ int main() {
     // Rotate the quaternion to align with north
     // Reading of the angle relative to North
     Eigen::Vector3f magnetometer(21.87, 27.56, -19.75); // Magnetometer reading
-    Eigen::Vector3f magnetometer_z_aligned = q_rot * magnetometer;
-    float yaw = atan2f(magnetometer[1], magnetometer[0]); // Yaw angle in radians
-    Eigen::Quaternionf q_yaw(Eigen::AngleAxisf(yaw, Eigen::Vector3f(0, 0, 1)));
-    Eigen::Quaternionf initial_quaternion = q_yaw * q_rot;
+    Eigen::Vector3f north_body = magnetometer.normalized();
+    Eigen::Vector3f y_axis_abs(0, 1, 0); // North vector in ENU frame
+    Eigen::Vector3f north_abs = q_rot * north_body; // Rotate magntetic north to body frame
+    float angle_rad = std::acos(north_abs.dot(y_axis_abs) / north_abs.norm());
+    Eigen::Quaternionf q_north(Eigen::AngleAxisf(angle_rad, Eigen::Vector3f(0, 0, 1))); // Quaternion to align with North
+    Eigen::Quaternionf initial_quaternion = q_north * q_rot;    // Rotation Abs RF to align with North
     initial_quaternion.normalize();
 
     // Bias of the accelerometer. gravity is in ENU coordinates, so we need to rotate it to match the sensor's frame of reference.
-    Eigen::Vector3f q_absolute_to_body = initial_quaternion.conjugate();
-    Eigen::Vector3f initial_gravity_body = q_absolute_to_local * gravity;
-    Eigen::Vector3f expected_gravity_body = q_absolute_to_local * expected_gravity;
+    Eigen::Quaternionf q_absolute_to_body = initial_quaternion.conjugate();
+    Eigen::Vector3f initial_gravity_body = q_absolute_to_body * gravity;
+    Eigen::Vector3f expected_gravity_body = q_absolute_to_body * expected_gravity;
     Eigen::Vector3f bias_a = initial_gravity_body - expected_gravity_body;
 
     // Bias of the gyroscope
