@@ -37,23 +37,6 @@ float* KalmanFilter::state() {
     return ekf.x;
 }
 
-Eigen::Vector3f standard_deviation(const std::vector<Eigen::Vector3f>& readings) {
-    Eigen::Vector3f mean = Eigen::Vector3f::Zero();
-    for (const auto& reading : readings) {
-        mean += reading;
-    }
-    mean /= readings.size();
-
-    Eigen::Vector3f variance = Eigen::Vector3f::Zero();
-    for (const auto& reading : readings) {
-        Eigen::Vector3f diff = reading - mean;
-        variance += diff.cwiseProduct(diff); // componente a componente: (x^2, y^2, z^2)
-    }
-    variance /= static_cast<float>(readings.size() - 1);
-
-    return variance.cwiseSqrt(); // raíz cuadrada componente a componente
-}
-
 std::tuple<Eigen::Quaternionf, Eigen::Vector3f, Eigen::Vector3f> KalmanFilter::calibration(Eigen::Vector3f gravity_reading, Eigen::Vector3f magnetometer_reading) {
     Eigen::Vector3f TolSTD(0.1, 0.1, 0.1); // Tolerance for standard deviation
     Eigen::Vector3f std(1, 1, 1); // Standard deviation of the gravity readings
