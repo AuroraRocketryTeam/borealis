@@ -1,4 +1,4 @@
-
+/*
 // Macros needed for a conflict between similar macro variables names of Arduino.h and Eigen.h
 #ifdef B1
 #undef B1
@@ -113,3 +113,4 @@ int main() {
 
     return 0;
 }
+*/
