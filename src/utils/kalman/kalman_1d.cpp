@@ -170,6 +170,11 @@ static const float A0 = 1e-3;
 static const float G0 = 1e-6;
 static const float Z0 = 1;
 
+float estimateBaroVar(float v) {
+    float std = (std::abs(v) / 300.0f) * 29.0f + 1.0f;
+    return std * std;
+}
+
 static const Eigen::Vector3f gravity(0, 0, -9.803); // Gravity vector in ENU coordinates
 
 // Set fixed process-noise covariance matrix Q, see [1]  ---------------------
@@ -186,14 +191,14 @@ static const float Q[EKF_N*EKF_N] = {
 
 // Set fixed measurement noise covariance matrix R ----------------------------
 
-static const float R[EKF_M*EKF_M] = {
+float R[EKF_M*EKF_M] = {
     A0, 0, 0, 0, 0, 0, 0,
     0, A0, 0, 0, 0, 0, 0,
     0, 0, A0, 0, 0, 0, 0,
     0, 0, 0, G0, 0, 0, 0,
     0, 0, 0, 0, G0, 0, 0,
     0, 0, 0, 0, 0, G0, 0,
-    0, 0, 0, 0, 0, 0, Z0
+    0, 0, 0, 0, 0, 0, estimateBaroVar(0)
 };
 
 // Jacobian matrix
@@ -371,6 +376,7 @@ int main() {
     float omega_y;
     float omega_z;
     float h_pressure_sensor;
+    float bias_pressure_sensor = 0.0f; // Bias for pressure sensor, can be adjusted if needed
 
     while (lineNum <= totalLines) {
         std::vector<float> acc = getAcc(lineNum);           // Get the accelerometer data
@@ -385,7 +391,7 @@ int main() {
         omega_x = omega[0]*M_PI/180.0; // Convert to rad/s
         omega_y = omega[1]*M_PI/180.0; // Convert to rad/s
         omega_z = omega[2]*M_PI/180.0; // Convert to rad/s
-        h_pressure_sensor = h_pressure_sensor_vec[0]; // Altitude from pressure sensor
+        h_pressure_sensor = h_pressure_sensor_vec[0] - bias_pressure_sensor; // Altitude from pressure sensor
         // std::cout << "Line: " << lineNum << ", Altitude: " << h_pressure_sensor << std::endl;
 
         float fx[EKF_N] = {0};
@@ -406,6 +412,8 @@ int main() {
             0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0
         };
+
+        R[EKF_M*EKF_M - 1] = estimateBaroVar(ekf.x[1]); // Update the last element of R with the barometer variance
         
         // Set the observation vector z
         float z[EKF_M] = {accX, accY, accZ, omega_x, omega_y, omega_z, h_pressure_sensor};
