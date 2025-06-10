@@ -38,7 +38,7 @@ Eigen::Vector3f standard_deviation(const std::vector<Eigen::Vector3f>& readings)
  {
     Serial.begin(115200);
 
-    Serial.println("Sensor Initialization...");
+    Serial.println("Sensors Initialization...");
     mprls.init();
     bno.init();
 
