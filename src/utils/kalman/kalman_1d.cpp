@@ -353,6 +353,11 @@ void computeJacobianF_tinyEKF(ekf_t* ekf, float dt, float omega_x, float omega_y
     }
 }
 
+// Returns altitude in meters given pressure in Pascals
+float pressureToAltitude(float pressurePa, float seaLevelPressurePa = 101325.0, float T0 = 288.15) {
+    return T0/0.0065 * (1.0 - pow(pressurePa / seaLevelPressurePa, 0.1903));
+}
+
 int main() {
     std::ofstream file("../csv_measurements/accEkf.csv", std::ios::trunc);
     file.close();
