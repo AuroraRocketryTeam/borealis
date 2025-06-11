@@ -15,7 +15,7 @@
 #undef B0
 #endif
 
-#define EKF_N 6 // Size of state space [3-positions, 3-velocities, 3-accelerations, 4-quaternion_rot] 
+#define EKF_N 6 // Size of state space [y-position, y-velocity, y-acceleration, w-quaternion, x-quaternion, y-quaternion, z-quaternion] 
 #define EKF_M 7 // Size of observation (measurement) space [3-positions, 3-accelerations, 4-quaternion_rot]
 
 #include <tinyekf.h>
@@ -52,22 +52,16 @@ private:
     const float A0 = 1e-3;
     const float G0 = 1e-6;
     const float Z0 = 1;
-    const float R0 = 1; // TODO: This is a placeholder for barometer variance, should be estimated based on barometer readings.
-
-    // TODO Estimate barometer variance:!!!
-    float estimateBaroVar(float v) {
-        float std = (std::abs(v) / 300.0f) * 29.0f + 1.0f;
-        return std * std;
-    }
+    const float R0 = 1; // !!! TODO: This is a placeholder for barometer variance, should be estimated based on barometer readings.
 
     // Process noise covariance
-    float Q_diag[EKF_N] = {
-        P0,
-        V0,
-        q_a, 
-        q_a, 
-        q_a, 
-        q_a
+    float Q[EKF_N*EKF_N] = {
+        P0, 0, 0, 0, 0, 0,
+        0, V0, 0, 0, 0, 0,
+        0, 0, q_a, 0, 0, 0,
+        0, 0, 0, q_a, 0, 0,
+        0, 0, 0, 0, q_a, 0,
+        0, 0, 0, 0, 0, q_a
     };
 
     // Measurement noise covariance
@@ -96,7 +90,9 @@ private:
     float F[EKF_N*EKF_N];
 
     // Gravity vector in ENU coordinates
-    const Eigen::Vector3f gravity{0, 0, -9.81};
+    const Eigen::Vector3f gravity{0, 0, -9.803};
+
+    float estimateBaroVar(float velocity);
 
     /**
      * @brief This function must run when the Launcher is still in the launching position.
@@ -112,9 +108,9 @@ private:
     // Compute H_q^{(a)} numerically
     Eigen::Matrix<float, 3, 4> computeHqAccelJacobian(const float dt, const Eigen::Quaternionf& q_nominal, const Eigen::Vector3f& accel_world, const Eigen::Vector3f& omega, float epsilon = 1e-5);
 
-    void run_model(ekf_t * ekf, float dt, float fx[EKF_N], float hx[EKF_M], float omega_x, float omega_y, float omega_z, float accel_z[3], float pressure);
+    void run_model(float dt, float fx[EKF_N], float hx[EKF_M], float omega_z[3], float accel_z[3], float pressure);
 
-    void computeJacobianF_tinyEKF(ekf_t* ekf, float dt, float omega_x, float omega_y, float omega_z, float accel_z[3], float F_out[EKF_N * EKF_N], float h_pressure_sensor);
+    void computeJacobianF_tinyEKF(float dt, float omega_z[3], float accel_z[3], float h_pressure_sensor);
 
     void quaternionToEulerAngles(const Eigen::Quaternionf& q, float& roll, float& pitch, float& yaw);
 };
