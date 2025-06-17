@@ -24,9 +24,10 @@ KalmanFilter1D::KalmanFilter1D(Eigen::Vector3f gravity_value, Eigen::Vector3f ma
 }
 
 std::vector<std::vector<float>> KalmanFilter1D::step(float dt, float omega[3], float accel[3], float pressure) {
+    // Convert accelerometer readings to Eigen vector
     Eigen::Vector3f accel_z(accel[0], accel[1], accel[2]);
     
-    // Conversion to rad/s
+    // Convert gyroscope readings from degrees/sec to radians/sec because TinyEKF expects radians
     omega[0] *= (float)M_PI / 180.0f;
     omega[1] *= (float)M_PI / 180.0f;
     omega[2] *= (float)M_PI / 180.0f;
@@ -51,7 +52,11 @@ std::vector<std::vector<float>> KalmanFilter1D::step(float dt, float omega[3], f
         0, 0, 0, 0, 0, 0
     };
 
-    R[EKF_M*EKF_M - 1] = estimateBaroVar(ekf.x[1]); // Update the last element of R with the barometer variance
+    // Estimate the barometer variance based on velocity
+    float std = (std::abs(ekf.x[1]) / 300.0f) * 29.0f + 1.0f;
+    float barvar =  std * std;
+
+    R[EKF_M*EKF_M - 1] = barvar; // Update the last element of R with the barometer variance
     
     // Set the observation vector z
     float z[EKF_M] = {accel[0], accel[1], accel[2], omega[0], omega[1], omega[2], pressure};
@@ -76,11 +81,6 @@ std::vector<std::vector<float>> KalmanFilter1D::step(float dt, float omega[3], f
 
 float* KalmanFilter1D::state() {
     return ekf.x;
-}
-
-float KalmanFilter1D::estimateBaroVar(float velocity) {
-    float std = (std::abs(velocity) / 300.0f) * 29.0f + 1.0f;
-    return std * std;
 }
 
 void KalmanFilter1D::quaternionToEulerAngles(const Eigen::Quaternionf& q, float& roll, float& pitch, float& yaw) {
