@@ -9,7 +9,8 @@
 #include <math.h>
 #include <cmath>
 #include <random>  // Include for random number generation
-#include <ArduinoEigen.h>
+#include "../lib/Eigen/Geometry"
+#include "../lib/Eigen/Dense"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -18,7 +19,7 @@
 #include "csv_utils.h"
 #include "parameters_ekf.h"
 
-// Change this line to include the TinyEKF library
+//#define TINYEKF_IMPLEMENTATION
 #include "../lib/TinyEKF-master/src/tinyekf.h"
 
 #include "math_utils.h"
@@ -102,6 +103,8 @@ int main() {
     float omega_z;
     float h_pressure_sensor;
     float z_gps; // GPS altitude, can be adjusted if needed
+    float z_gps_updated;
+    float gps_prev_val;
 
     while (lineNum <= totalLines) {
         std::vector<float> acc = getAcc(lineNum);           // Get the accelerometer data
@@ -120,6 +123,15 @@ int main() {
         h_pressure_sensor = pressureToAltitude(pressure_sensor_vec[0]) - h_bias_pressure_sensor - SeaLevel;
         z_gps = gps[0] - SeaLevel - gps_bias;
 
+        if (z_gps == gps_prev_val){
+            z_gps_updated = z_gps_updated + ekf.x[1]*dt; // If the GPS value is the same as the previous one, add a delay
+        }  
+        else {
+            z_gps_updated = z_gps;
+        }
+        gps_prev_val = z_gps;
+        z_gps = z_gps_updated;
+
         float fx[EKF_N] = {0};
         float hx[EKF_M] = {0};
 
@@ -133,6 +145,7 @@ int main() {
         R[EKF_M*EKF_M - 1] = estimateBaroVar(ekf.x[1]); // Update the last element of R with the barometer variance
  
         computeJacobianF_tinyEKF(&ekf, dt, omega_x, omega_y, omega_z, accel_z.data(), F, h_pressure_sensor, z_gps);
+
         // Set the observation vector z
         float z[EKF_M] = {accX, accY, accZ, omega_x, omega_y, omega_z, h_pressure_sensor, z_gps};
 
