@@ -1,3 +1,5 @@
+#pragma once
+
 #include <variant>
 #include <Arduino.h>
 #include "SdFat.h"

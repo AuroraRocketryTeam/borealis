@@ -31,11 +31,25 @@ void TaskManager::initializeTasks()
     tasks[TaskType::SENSOR] = std::make_unique<SensorTask>(
         sensorData,
         sensorDataMutex,
-        bno055, // Pass the shared pointers
+        bno055,
         baro1,
-        baro2);
-    tasks[TaskType::GPS] = std::make_unique<GpsTask>(sensorData, sensorDataMutex, gps);
-    tasks[TaskType::EKF] = std::make_unique<EkfTask>(sensorData, sensorDataMutex, kalmanFilter);
+        baro2,
+        rocketLogger,
+        loggerMutex);
+    tasks[TaskType::GPS] = std::make_unique<GpsTask>(
+        sensorData, 
+        sensorDataMutex, 
+        gps,
+        rocketLogger,
+        loggerMutex);
+    tasks[TaskType::EKF] = std::make_unique<EkfTask>(
+        sensorData, 
+        sensorDataMutex, 
+        kalmanFilter);
+    tasks[TaskType::SD_LOGGING] = std::make_unique<SDLoggingTask>(
+        rocketLogger,
+        loggerMutex,
+        sdCard);
 
     // tasks[TaskType::TELEMETRY] = std::make_unique<TelemetryTask>(sensorData, sensorDataMutex);
     // tasks[TaskType::LOGGING] = std::make_unique<LoggingTask>(sensorData, sensorDataMutex);

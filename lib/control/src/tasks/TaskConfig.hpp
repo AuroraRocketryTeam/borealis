@@ -9,7 +9,8 @@ enum class TaskType
     EKF,
     APOGEE_DETECTION,
     RECOVERY,
-    DATA_COLLECTION,        // This might be removed if SharedData are used in the corresponding tasks
+    DATA_COLLECTION,
+    SD_LOGGING,
     TELEMETRY,
     GPS,
     LOGGING
