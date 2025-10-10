@@ -2,13 +2,14 @@
 
 KalmanFilter1D::KalmanFilter1D(
     Eigen::Vector3f gravity_value, 
-    Eigen::Vector3f magnetometer_value) 
+    Eigen::Vector3f magnetometer_value,
+    Eigen::Vector3f gyro_reading) 
 {
     // Initialize gravity vector in ENU coordinates
     gravity = Eigen::Vector3f(0, 0, -GRAVITY); // Expected gravity for specific location
     
     //calibration phase
-    std::tuple<Eigen::Quaternionf, Eigen::Vector3f, Eigen::Vector3f> calibration_data = calibration(gravity_value, magnetometer_value);
+    std::tuple<Eigen::Quaternionf, Eigen::Vector3f, Eigen::Vector3f> calibration_data = calibration(gravity_value, magnetometer_value, gyro_reading);
 
     bias_a = std::get<1>(calibration_data);
     bias_g = std::get<2>(calibration_data);
