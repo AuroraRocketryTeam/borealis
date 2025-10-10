@@ -48,7 +48,7 @@ std::tuple<Eigen::Quaternionf, Eigen::Vector3f, Eigen::Vector3f> KalmanFilter1D:
     Eigen::Vector3f magnetometer_reading,
     Eigen::Vector3f gyro_reading) 
 {
-    Eigen::Vector3f expected_gravity(0, 0, GRAVITY); // Expected gravity vector for specific location (Forlì - 34 m over sea level)
+    Eigen::Vector3f expected_gravity(0, 0, GRAVITY); // Expected gravity vector for Constantia, Portugal
     
     // Improved gravity alignment algorithm
     Eigen::Vector3f z(0, 0, 1);
