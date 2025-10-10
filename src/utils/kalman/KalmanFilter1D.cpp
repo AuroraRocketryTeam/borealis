@@ -5,7 +5,7 @@ KalmanFilter1D::KalmanFilter1D(
     Eigen::Vector3f magnetometer_value) 
 {
     // Initialize gravity vector in ENU coordinates
-    gravity = Eigen::Vector3f(0, 0, GRAVITY); // Expected gravity for specific location
+    gravity = Eigen::Vector3f(0, 0, -GRAVITY); // Expected gravity for specific location
     
     //calibration phase
     std::tuple<Eigen::Quaternionf, Eigen::Vector3f, Eigen::Vector3f> calibration_data = calibration(gravity_value, magnetometer_value);
@@ -44,9 +44,10 @@ KalmanFilter1D::KalmanFilter1D(
 
 std::tuple<Eigen::Quaternionf, Eigen::Vector3f, Eigen::Vector3f> KalmanFilter1D::calibration(
     Eigen::Vector3f gravity_reading, 
-    Eigen::Vector3f magnetometer_reading) 
+    Eigen::Vector3f magnetometer_reading,
+    Eigen::Vector3f gyro_reading) 
 {
-    Eigen::Vector3f expected_gravity(0, 0, 9.80537); // Expected gravity vector for specific location (Forlì - 34 m over sea level)
+    Eigen::Vector3f expected_gravity(0, 0, GRAVITY); // Expected gravity vector for specific location (Forlì - 34 m over sea level)
     
     // Improved gravity alignment algorithm
     Eigen::Vector3f z(0, 0, 1);
@@ -64,17 +65,18 @@ std::tuple<Eigen::Quaternionf, Eigen::Vector3f, Eigen::Vector3f> KalmanFilter1D:
     }
 
     // Improved north alignment with magnetic declination handling
-    Eigen::Vector3f north_body = magnetometer_reading.normalized();
-    Eigen::Vector3f y_axis_abs(0, 1, 0); // North vector in ENU frame
-    Eigen::Vector3f north_abs = q_rot * north_body;
+    // Eigen::Vector3f north_body = magnetometer_reading.normalized();
+    // Eigen::Vector3f y_axis_abs(0, 1, 0); // North vector in ENU frame
+    // Eigen::Vector3f north_abs = q_rot * north_body;
     
-    // Project to horizontal plane to avoid tilt effects
-    north_abs[2] = 0.0f;
-    north_abs.normalize();
+    // // Project to horizontal plane to avoid tilt effects
+    // north_abs[2] = 0.0f;
+    // north_abs.normalize();
     
-    float angle_rad = std::atan2(north_abs[0], north_abs[1]); // Use atan2 for better handling
-    Eigen::Quaternionf q_north(Eigen::AngleAxisf(angle_rad, Eigen::Vector3f(0, 0, 1)));
-    Eigen::Quaternionf initial_quaternion = q_north * q_rot;
+    // float angle_rad = std::atan2(north_abs[0], north_abs[1]); // Use atan2 for better handling
+    // Eigen::Quaternionf q_north(Eigen::AngleAxisf(angle_rad, Eigen::Vector3f(0, 0, 1)));
+    // Eigen::Quaternionf initial_quaternion = q_north * q_rot;
+    Eigen::Quaternionf initial_quaternion = q_rot;
     initial_quaternion.normalize();
 
     // Improved bias estimation with better numerical stability
@@ -85,9 +87,10 @@ std::tuple<Eigen::Quaternionf, Eigen::Vector3f, Eigen::Vector3f> KalmanFilter1D:
     Eigen::Vector3f bias_a = gravity_reading - expected_gravity_body;
     
     // Gyroscope bias: assume zero initial angular velocity (stationary assumption)
-    Eigen::Vector3f bias_w = Eigen::Vector3f::Zero();
+    // Eigen::Vector3f bias_g(yro) = Eigen::Vector3f::Zero(); Line that was before
+    Eigen::Vector3f bias_g = gyro_reading; // Use average readings during calibration phase
     
-    return std::make_tuple(initial_quaternion, bias_a, bias_w);
+    return std::make_tuple(initial_quaternion, bias_a, bias_g);
 }
 
 void KalmanFilter1D::step(
@@ -274,6 +277,6 @@ Eigen::Vector3f KalmanFilter1D::rotateToBody(
 float KalmanFilter1D::estimateBaroVar(
     float v) 
 {
-    float std = (std::abs(v) / 300.0f) * 29.0f + 1.0f;
+    float std = (std::abs(v) / 300.0f) * 5.0f + 1.0f;
     return std * std;
 }
